@@ -8,6 +8,7 @@ class EmulateRV32I:
     """
     RISV-V RV32I基本整数指令集模拟器
     定义0x13000000地址为串口发送数据寄存器
+    向串口写入0x4程序退出
     """
 
     def __init__(self):
@@ -55,17 +56,18 @@ class EmulateRV32I:
         """
         base_addr_str = ("0" * 32 + bin(base_addr)[2:])[-32:]
         self.cu.pc.set_value(base_addr_str)
-        for i in range(66):
-            self.cu.instruction_fetch()
-            self.cu.instruction_decode()
-            self.cu.exe()
-            self.cu.mem_access()
-            self.cu.write_back()
 
-        # while True:
-        #     # 5级流水线
+        # for i in range(66):
         #     self.cu.instruction_fetch()
         #     self.cu.instruction_decode()
         #     self.cu.exe()
         #     self.cu.mem_access()
         #     self.cu.write_back()
+
+        while True:
+            # 5级流水线
+            self.cu.instruction_fetch()
+            self.cu.instruction_decode()
+            self.cu.exe()
+            self.cu.mem_access()
+            self.cu.write_back()

@@ -1,3 +1,5 @@
+import sys
+
 from Register import Register
 from Memory import Memory
 from ArithmeticLogicUnit import ArithmeticLogicUnit
@@ -14,6 +16,8 @@ class ControlUnit:
     old_pc = Register()
     # 默认字节序
     endian = "big"
+    # 是否输出调试信息
+    debug = False
 
     # 保存译码中间变量
     # 指令类型
@@ -239,7 +243,7 @@ class ControlUnit:
         """
         tmp = Register()
         self.alu.slt(tmp, rs1, rs2)
-        if tmp.get_value()[0] != "00000000000000000000000000000001":
+        if tmp.get_value() != "00000000000000000000000000000001":
             return
         offset = Register()
         offset.set_value(imm[0] * 20 + imm)
@@ -255,7 +259,7 @@ class ControlUnit:
         """
         tmp = Register()
         self.alu.slt(tmp, rs1, rs2)
-        if tmp.get_value()[0] == "00000000000000000000000000000001":
+        if tmp.get_value() == "00000000000000000000000000000001":
             return
         offset = Register()
         offset.set_value(imm[0] * 20 + imm)
@@ -271,7 +275,7 @@ class ControlUnit:
         """
         tmp = Register()
         self.alu.sltu(tmp, rs1, rs2)
-        if tmp.get_value()[0] != "00000000000000000000000000000001":
+        if tmp.get_value() != "00000000000000000000000000000001":
             return
         offset = Register()
         offset.set_value(imm[0] * 20 + imm)
@@ -287,7 +291,7 @@ class ControlUnit:
         """
         tmp = Register()
         self.alu.sltu(tmp, rs1, rs2)
-        if tmp.get_value()[0] == "00000000000000000000000000000001":
+        if tmp.get_value() == "00000000000000000000000000000001":
             return
         offset = Register()
         offset.set_value(imm[0] * 20 + imm)
@@ -297,12 +301,12 @@ class ControlUnit:
     def jal(self, rd, imm):
         """跳转并链接
         :param rd:保存原pc+4到rd
-        :param imm:有符号偏移量，单位为2byte，12位01字符串
+        :param imm:有符号偏移量，单位为2byte，20位01字符串
         :return:无
         """
         self.alu.addi(rd, self.pc, "000000000100")
         offset = Register()
-        offset.set_value(imm[0] * 20 + imm)
+        offset.set_value(imm[0] * 12 + imm)
         self.alu.add(offset, offset, offset)
         self.alu.add(self.pc, self.pc, offset)
 
@@ -342,7 +346,7 @@ class ControlUnit:
         :return: 无
         """
         self.lw(self.ir, self.pc, "000000000000")
-        print("{0} : {1}  ".format(self.pc.get_value(),self.ir.get_value()),end="")
+        self.mprint("{0} : {1}  ".format(self.pc.get_value(),self.ir.get_value()),end="")
         # 保存一个旧pc副本，方便判断pc是否有修改
         self.old_pc.set_value(self.pc.get_value())
 
@@ -368,9 +372,9 @@ class ControlUnit:
         elif self.opcode == "1101111":
             self.instruction_type = "j-type"
             self.rd_id = int(self.ir[-12, -7], 2)
-            self.imm20 = self.ir[-32:-12][-21:-20] + self.ir[-32:-12][-9:] + self.ir[-32:-12][-10:-9] + self.ir[
+            self.imm20 = self.ir[-32:-12][-20:-19] + self.ir[-32:-12][-8:] + self.ir[-32:-12][-9:-8] + self.ir[
                                                                                                         -32:-12][
-                                                                                                        -20:-10]
+                                                                                                        -19:-9]
         # jalr
         elif self.opcode == "1100111":
             self.instruction_type = "i-type"
@@ -423,72 +427,72 @@ class ControlUnit:
         :return:无
         """
         if self.opcode == "0110111":
-            print("lui x{0}, {1}".format(self.rd_id, self.imm20))
+            self.mprint("lui x{0}, {1}".format(self.rd_id, self.imm20))
             self.alu.lui(self.x[self.rd_id], self.imm20)
         elif self.opcode == "0010111":
-            print("auipc x{0}, {1}".format(self.rd_id, self.imm20))
+            self.mprint("auipc x{0}, {1}".format(self.rd_id, self.imm20))
             self.alu.auipc(self.x[self.rd_id], self.pc, self.imm20)
         elif self.opcode == "0010011":
             if self.funct3 == "000":
-                print("addi x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id,self.imm12))
+                self.mprint("addi x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id,self.imm12))
                 self.alu.addi(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "010":
-                print("slti x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("slti x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.alu.slti(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "011":
-                print("sltiu x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("sltiu x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.alu.sltiu(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "100":
-                print("xori x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("xori x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.alu.xori(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "110":
-                print("ori x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("ori x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.alu.ori(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "111":
-                print("andi x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("andi x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.alu.andi(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "001":
-                print("slli x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.shamt))
+                self.mprint("slli x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.shamt))
                 self.alu.slli(self.x[self.rd_id], self.x[self.rs1_id], self.shamt)
             elif self.funct3 == "101":
                 if self.funct7 == "0000000":
-                    print("srli x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.shamt))
+                    self.mprint("srli x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.shamt))
                     self.alu.srli(self.x[self.rd_id], self.x[self.rs1_id], self.shamt)
                 elif self.funct7 == "0100000":
-                    print("srai x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.shamt))
+                    self.mprint("srai x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.shamt))
                     self.alu.srai(self.x[self.rd_id], self.x[self.rs1_id], self.shamt)
         elif self.opcode == "0110011":
             if self.funct3 == "000":
                 if self.funct7 == "0000000":
-                    print("add x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                    self.mprint("add x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                     self.alu.add(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
                 elif self.funct7 == "0100000":
-                    print("sub x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                    self.mprint("sub x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                     self.alu.sub(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "001":
-                print("sll x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                self.mprint("sll x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                 self.alu.sll(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "010":
-                print("slt x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                self.mprint("slt x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                 self.alu.slt(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "011":
-                print("sltu x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                self.mprint("sltu x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                 self.alu.sltu(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "100":
-                print("xor x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                self.mprint("xor x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                 self.alu.xor(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "101":
                 if self.funct7 == "0000000":
-                    print("srl x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                    self.mprint("srl x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                     self.alu.srl(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
                 elif self.funct7 == "0100000":
-                    print("sra x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                    self.mprint("sra x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                     self.alu.sra(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "110":
-                print("or x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                self.mprint("or x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                 self.alu.or_(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
             elif self.funct3 == "111":
-                print("and x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
+                self.mprint("and x{0}, x{1}, x{2}".format(self.rd_id, self.rs1_id, self.rs2_id))
                 self.alu.and_(self.x[self.rd_id], self.x[self.rs1_id], self.x[self.rs2_id])
 
     def mem_access(self):
@@ -496,56 +500,56 @@ class ControlUnit:
         :return:无
         """
         if self.opcode == "1101111":
-            print("jal x{0}, {1}".format(self.rd_id, self.imm12))
-            self.jal(self.x[self.rd_id], self.imm12)
+            self.mprint("jal x{0}, {1}".format(self.rd_id, self.imm12))
+            self.jal(self.x[self.rd_id], self.imm20)
         elif self.opcode == "1100111":
-            print("jalr x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+            self.mprint("jalr x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
             self.jalr(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
         elif self.opcode == "1100011":
             if self.funct3 == "000":
-                print("beq x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("beq x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.beq(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "001":
-                print("bne x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("bne x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.bne(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "100":
-                print("blt x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("blt x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.blt(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "101":
-                print("bge x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("bge x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.bge(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "110":
-                print("bltu x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("bltu x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.bltu(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "111":
-                print("bgeu x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("bgeu x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.bgeu(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
         elif self.opcode == "0000011":
             if self.funct3 == "000":
-                print("lb x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("lb x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.lb(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "001":
-                print("lh x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("lh x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.lh(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "010":
-                print("lw x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("lw x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.lw(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "100":
-                print("lbu x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("lbu x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.lbu(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
             elif self.funct3 == "101":
-                print("lhu x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
+                self.mprint("lhu x{0}, x{1}, {2}".format(self.rd_id, self.rs1_id, self.imm12))
                 self.lhu(self.x[self.rd_id], self.x[self.rs1_id], self.imm12)
         elif self.opcode == "0001111":
-            print("fence")
+            self.mprint("fence")
             self.fence()
         elif self.opcode == "1110011":
             if self.funct3 == "000":
                 if self.funct7 == "0000000":
-                    print("ecall")
+                    self.mprint("ecall")
                     self.ecall()
                 elif self.funct7 == "0000001":
-                    print("ebreak")
+                    self.mprint("ebreak")
                     self.ebreak()
 
     def write_back(self):
@@ -554,14 +558,18 @@ class ControlUnit:
         """
         if self.opcode == "0100011":
             if self.funct3 == "000":
-                print("sb x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("sb x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.sb(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "001":
-                print("sh x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("sh x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.sh(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
             elif self.funct3 == "010":
-                print("sw x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
+                self.mprint("sw x{0}, x{1}, {2}".format(self.rs1_id, self.rs2_id, self.imm12))
                 self.sw(self.x[self.rs1_id], self.x[self.rs2_id], self.imm12)
         # pc指向下一条指令地址
         if self.pc.get_value() == self.old_pc.get_value():
             self.alu.addi(self.pc, self.pc, "000000000100")
+
+    def mprint(self, *args, sep=' ', end='\n', file=None):
+        if self.debug:
+            print(*args, sep=sep, end=end, file=file)

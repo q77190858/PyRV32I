@@ -57,10 +57,10 @@ class TestArithmeticLogicUnit(unittest.TestCase):
         rs1 = Register()
         rs2 = Register()
         alu = ArithmeticLogicUnit()
-        rs2.set_value("00000000000000000000000000010000")
+        rs1.set_value('01111111111111111111111111111110')
+        rs2.set_value('11111111111111111111111111111111')
         alu.sltu(rd, rs1, rs2)
         self.assertEqual(rd.get_value(), "00000000000000000000000000000001")
-
 
 if __name__ == '__main__':
     unittest.main()

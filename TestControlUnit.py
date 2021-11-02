@@ -11,7 +11,7 @@ class TestControlUnit(unittest.TestCase):
     for i in range(32):
         regs.append(Register())
     regs[0].set_x0()
-    cu = ControlUnit(mem, regs)
+    cu = ControlUnit(mem, regs,"big")
 
     def test_lb(self):
         self.regs[1].set_value("1" + "0" * 30 + "1")
@@ -27,6 +27,16 @@ class TestControlUnit(unittest.TestCase):
 
     def test_instruct_decode(self):
         pass
+
+    def test_bgeu(self):
+        old_pc = Register()
+        old_pc.set_value(self.cu.pc.get_value())
+        rs1 = Register()
+        rs2 = Register()
+        rs1.set_value('01111111111111111111111111111110')
+        rs2.set_value('11111111111111111111111111111111')
+        self.cu.bgeu(rs1, rs2,"000000000010")
+        self.assertEqual(old_pc.get_value(), self.cu.pc.get_value())
 
 
 if __name__ == '__main__':

@@ -1,3 +1,6 @@
+import sys
+
+
 class Memory:
     """模拟内存类
     使用一个长度为8的字符串来保存1字节的数据
@@ -46,7 +49,11 @@ class Memory:
             return
         # 如果地址是0x13000000,则将数据写入串口
         if addr=="00010011000000000000000000000000":
+            # 如果数据等于4，则程序退出
+            if value=="00000100":
+                sys.exit()
             self.uart.append(chr(int(value,2)))
+            print(chr(int(value,2)),end="")
         # 否则将值存入字典
         else:
             self.dic[addr] = value

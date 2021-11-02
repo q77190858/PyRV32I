@@ -296,11 +296,7 @@ class ArithmeticLogicUnit:
         imm_ext = "".join(imm[0] * 20) + imm
         tmp = Register()
         tmp.set_value(imm_ext)
-        self.sub(tmp, rs1, tmp)
-        if tmp[0] == "1":
-            rd.set_value("00000000000000000000000000000001")
-        else:
-            rd.set_value("00000000000000000000000000000000")
+        self.sltu(rd, rs1, tmp)
 
     def slt(self, rd, rs1, rs2):
         """寄存器rs1 < 寄存器rs2 有符号数比较
@@ -330,8 +326,11 @@ class ArithmeticLogicUnit:
         :return:无
         """
         tmp = Register()
-        self.sub(tmp, rs1, rs2)
-        if tmp.get_value()[0] == "1":
-            rd.set_value("00000000000000000000000000000001")
-        else:
-            rd.set_value("00000000000000000000000000000000")
+        for i in range(32):
+            if rs1.get_value()[i]=="1" and rs2.get_value()[i]=="0":
+                rd.set_value("00000000000000000000000000000000")
+                return
+            elif rs1.get_value()[i]=="0" and rs2.get_value()[i]=="1":
+                rd.set_value("00000000000000000000000000000001")
+                return
+        rd.set_value("00000000000000000000000000000000")
